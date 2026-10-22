@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X Tracker</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f3ef; --surface: #ffffff; --surface-2: #ecebe5; --text: #16161a;
+  --muted: #6b6a72; --line: #dddbd3; --accent: #1f6feb; --accent-soft: #e3edff;
+  --danger: #e5484d; --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0f12; --surface: #18181d; --surface-2: #23232a; --text: #ececf1;
+    --muted: #9a99a3; --line: #2c2c34; --accent: #5b9bff; --accent-soft: #1b2740;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f0f12; --surface: #18181d; --surface-2: #23232a; --text: #ececf1;
+  --muted: #9a99a3; --line: #2c2c34; --accent: #5b9bff; --accent-soft: #1b2740;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.6 "IBM Plex Sans JP", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, input { font: inherit; color: inherit; }
+
+header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.inner { max-width: 1400px; margin: 0 auto; padding: 0 16px; }
+.bar { display: flex; align-items: center; gap: 12px; min-height: 60px; flex-wrap: wrap; padding: 10px 0; }
+.logo { font-weight: 700; font-size: 18px; white-space: nowrap; }
+form.add { display: flex; gap: 8px; margin-left: auto; flex: 1; max-width: 460px; min-width: 260px; }
+.prefix { position: relative; flex: 1; min-width: 0; display: flex; }
+.prefix span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.field { flex: 1; min-width: 0; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0 12px 0 28px; }
+.field:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.btn { height: 40px; border: 0; border-radius: 10px; padding: 0 16px; cursor: pointer; background: var(--accent); color: #fff; font-weight: 500; white-space: nowrap; }
+.ghost { height: 40px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 0 12px; cursor: pointer; white-space: nowrap; }
+.ghost:hover { border-color: var(--muted); }
+
+.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 12px; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 13px 5px 6px; cursor: pointer; font-size: 13.5px; white-space: nowrap; }
+.tab.all { padding-left: 13px; }
+.tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.ini { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; flex: none; }
+
+main { padding-top: 16px; padding-bottom: 60px; }
+.notice { background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 12px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 16px; display: flex; gap: 10px; align-items: center; }
+.notice button { margin-left: auto; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+
+/* 「すべて」= アカウントごとの列を横に並べる */
+.columns { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x mandatory; align-items: flex-start; }
+.col { flex: 0 0 380px; max-width: calc(100vw - 32px); scroll-snap-align: start; }
+.single { max-width: 620px; margin: 0 auto; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.panel-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.panel-head .ini { width: 30px; height: 30px; font-size: 14px; }
+.panel-head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.small-btn { border: 1px solid var(--line); background: transparent; border-radius: 8px; height: 30px; padding: 0 10px; font-size: 12.5px; cursor: pointer; color: var(--text); display: inline-flex; align-items: center; white-space: nowrap; }
+.small-btn:hover { border-color: var(--muted); text-decoration: none; }
+.small-btn.rm:hover { color: var(--danger); border-color: var(--danger); }
+.panel-body { min-height: 200px; }
+.state { color: var(--muted); font-size: 13.5px; padding: 28px 18px; text-align: center; }
+.state a { display: inline-block; margin-top: 8px; }
+
+.empty { text-align: center; color: var(--muted); padding: 80px 16px; }
+.empty b { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13.5px; z-index: 50; max-width: calc(100% - 32px); }
+
+@media (max-width: 600px) {
+  form.add { max-width: none; margin-left: 0; flex-basis: 100%; }
+  .bar .ghost { margin-left: auto; }
+  .col { flex-basis: calc(100vw - 32px); }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <div class="bar">
+      <div class="logo">X Tracker</div>
+      <button class="ghost" id="shareBtn" type="button" title="他の端末で同じリストを開くためのURLをコピー">リストURLをコピー</button>
+      <form class="add" id="addForm" autocomplete="off">
+        <label class="prefix"><span>@</span>
+          <input class="field" id="usernameInput" placeholder="username または https://x.com/username" aria-label="ユーザーネーム">
+        </label>
+        <button class="btn">追加</button>
+      </form>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="アカウント"></nav>
+  </div>
+</header>
+
+<main class="inner">
+  <div class="notice" id="notice">
+    <span>タイムラインは、このブラウザで <a href="https://x.com/login" target="_blank" rel="noopener">Xにログイン</a> していると表示されます。表示されない場合はログインしてから再読み込みしてください。</span>
+    <button type="button" id="noticeClose" aria-label="閉じる">×</button>
+  </div>
+  <div id="view"></div>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const KEY = "xtracker.accounts";
+  const USER_RE = /^[A-Za-z0-9_]{1,15}$/;
+
+  const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  // ?u=a,b,c で開かれたらそのリストを取り込む（他の端末への引き継ぎ用）
+  let accounts = load(KEY, []);
+  const fromUrl = new URLSearchParams(location.search).get("u");
+  if (fromUrl) {
+    for (const u of fromUrl.split(",").map(normalize).filter(Boolean)) if (!accounts.includes(u)) accounts.push(u);
+    save(KEY, accounts);
+    history.replaceState(null, "", location.pathname + location.hash);
+  }
+
+  let filter = readHash();
+  window.addEventListener("hashchange", () => { filter = readHash(); render(); });
+
+  function readHash() {
+    const m = location.hash.match(/^#@([A-Za-z0-9_]{1,15})$/);
+    return m ? m[1].toLowerCase() : null;
+  }
+  function go(u) { location.hash = u ? "@" + u : ""; if (!u) { filter = null; render(); } }
+
+  function normalize(input) {
+    let s = String(input || "").trim();
+    const m = s.match(/(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})/i);
+    if (m) s = m[1];
+    s = s.replace(/^@/, "");
+    return USER_RE.test(s) ? s.toLowerCase() : null;
+  }
+
+  // ---------------------------------------------------- 追加・削除
+  $("addForm").onsubmit = (e) => {
+    e.preventDefault();
+    const u = normalize($("usernameInput").value);
+    if (!u) return toast("ユーザーネームの形式が正しくありません（英数字と_、15文字以内）");
+    if (accounts.includes(u)) { toast(`@${u} はすでに追加されています`); return go(u); }
+    accounts.push(u);
+    save(KEY, accounts);
+    $("usernameInput").value = "";
+    toast(`@${u} を追加しました`);
+    filter === null ? render() : go(null);
+  };
+
+  function remove(u) {
+    if (!confirm(`@${u} をリストから外しますか？`)) return;
+    accounts = accounts.filter((a) => a !== u);
+    save(KEY, accounts);
+    if (filter === u) go(null); else render();
+  }
+
+  $("shareBtn").onclick = async () => {
+    if (!accounts.length) return toast("まだアカウントがありません");
+    const url = `${location.origin}${location.pathname}?u=${accounts.join(",")}`;
+    try { await navigator.clipboard.writeText(url); toast("URLをコピーしました。他の端末でこのURLを開くと同じリストになります"); }
+    catch { prompt("このURLを他の端末で開いてください", url); }
+  };
+
+  if (load("xtracker.noticeClosed", false)) $("notice").hidden = true;
+  $("noticeClose").onclick = () => { $("notice").hidden = true; save("xtracker.noticeClosed", true); };
+
+  // ---------------------------------------------------- 表示
+  function render() {
+    if (filter && !accounts.includes(filter)) filter = null;
+    renderTabs();
+    const view = $("view");
+    view.replaceChildren();
+
+    if (!accounts.length) {
+      view.append(el("div", { className: "empty" },
+        el("b", { textContent: "アカウントを追加しましょう" }),
+        "上の欄にトラッキングしたいユーザーネームを入力してください。"));
+      return;
+    }
+
+    if (filter) {
+      const wrap = el("div", { className: "single" }, panel(filter, 1400));
+      view.append(wrap);
+    } else {
+      const cols = el("div", { className: "columns" });
+      for (const u of accounts) cols.append(el("div", { className: "col" }, panel(u, columnHeight())));
+      view.append(cols);
+    }
+  }
+
+  function columnHeight() {
+    return Math.max(480, window.innerHeight - 200);
+  }
+
+  function renderTabs() {
+    const tabs = $("tabs");
+    tabs.replaceChildren();
+    const all = el("button", { className: "tab all" + (filter ? "" : " active"), textContent: `すべて（${accounts.length}）` });
+    all.onclick = () => go(null);
+    tabs.append(all);
+    for (const u of accounts) {
+      const b = el("button", { className: "tab" + (filter === u ? " active" : "") }, initial(u), "@" + u);
+      b.onclick = () => go(u);
+      tabs.append(b);
+    }
+  }
+
+  function panel(u, height) {
+    const body = el("div", { className: "panel-body" }, el("div", { className: "state", textContent: "読み込み中…" }));
+    const head = el("div", { className: "panel-head" },
+      initial(u),
+      el("b", { textContent: "@" + u }),
+      filter ? "" : Object.assign(el("button", { className: "small-btn", type: "button", textContent: "拡大" }), { onclick: () => go(u) }),
+      el("a", { className: "small-btn", href: `https://x.com/${u}`, target: "_blank", rel: "noopener", textContent: "Xで開く ↗" }),
+      Object.assign(el("button", { className: "small-btn rm", type: "button", textContent: "外す", title: "リストから外す" }), { onclick: () => remove(u) })
+    );
+    mountTimeline(u, body, height);
+    return el("section", { className: "panel" }, head, body);
+  }
+
+  // ---------------------------------------------------- 埋め込みタイムライン
+  let widgetsPromise;
+  function loadWidgets() {
+    if (window.twttr?.widgets) return Promise.resolve(window.twttr);
+    widgetsPromise ??= new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://platform.twitter.com/widgets.js";
+      s.async = true;
+      s.onload = () => (window.twttr?.ready ? window.twttr.ready(resolve) : resolve(window.twttr));
+      s.onerror = () => { widgetsPromise = null; reject(new Error("load")); };
+      document.head.append(s);
+    });
+    return widgetsPromise;
+  }
+
+  function isDark() {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  async function mountTimeline(u, box, height) {
+    try {
+      const twttr = await loadWidgets();
+      const holder = el("div");
+      const node = await twttr.widgets.createTimeline(
+        { sourceType: "profile", screenName: u },
+        holder,
+        { height, theme: isDark() ? "dark" : "light", lang: "ja", dnt: true, chrome: "noheader transparent" }
+      );
+      if (!box.isConnected) return;
+      box.replaceChildren(node ? holder : failState(u, "タイムラインを表示できませんでした。"));
+    } catch {
+      if (!box.isConnected) return;
+      box.replaceChildren(failState(u, "Xの埋め込みスクリプトを読み込めませんでした。広告ブロッカーが原因のことがあります。"));
+    }
+  }
+
+  function failState(u, msg) {
+    return el("div", { className: "state" }, msg, el("br"),
+      el("a", { href: `https://x.com/${u}`, target: "_blank", rel: "noopener", textContent: `@${u} をXで開く ↗` }));
+  }
+
+  // ---------------------------------------------------- utils
+  function initial(u) {
+    let h = 0; for (const c of u) h = (h * 31 + c.charCodeAt(0)) % 360;
+    return el("span", { className: "ini", textContent: u[0].toUpperCase(), style: `background:hsl(${h} 45% 45%)` });
+  }
+
+  function el(tag, props = {}, ...children) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === "style") n.setAttribute("style", v); else n[k] = v;
+    }
+    for (const c of children) if (c !== "" && c != null) n.append(c);
+    return n;
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 3200);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
